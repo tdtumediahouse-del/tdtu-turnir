@@ -61,7 +61,8 @@
                         <div v-if="matches.length === 0" class="text-center p-8 dim">
                             O'yinlar hali qo'shilmagan
                         </div>
-                        <div v-for="(match, idx) in matches" :key="match.id" :style="{'--i': idx}" class="glass tap mb-3 p-4 flex items-center justify-between">
+                        <div v-for="(match, idx) in matches" :key="match.id" :style="{'--i': idx}" class="glass tap mb-3 p-4 flex items-center justify-between relative">
+                            <div class="absolute top-2 left-3 text-[10px] font-black dim tracking-wider">{{ idx + 1 }}-O'YIN</div>
                             <div class="flex-1 flex flex-col items-center gap-2">
                                 <div v-html="teamLogo(match.team1)" class="crest w-12 h-12"></div>
                                 <div class="text-xs font-bold text-center leading-tight">{{ getTeamName(match.team1) }}</div>
