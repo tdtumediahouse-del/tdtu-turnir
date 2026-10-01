@@ -69,9 +69,9 @@
                                     <span class="text-xs font-bold text-center leading-tight">{{ getTeamName(match.team1) }}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <input type="number" class="input-3d score-input" v-model.number="match.score1" min="0" placeholder="-">
+                                    <input type="number" class="input-3d score-input" v-model.number="match.score1" @input="triggerSave" min="0" placeholder="-">
                                     <span class="font-bold text-xl dim">:</span>
-                                    <input type="number" class="input-3d score-input" v-model.number="match.score2" min="0" placeholder="-">
+                                    <input type="number" class="input-3d score-input" v-model.number="match.score2" @input="triggerSave" min="0" placeholder="-">
                                 </div>
                                 <div class="flex flex-col items-center flex-1">
                                     <img :src="getTeamLogo(match.team2)" class="w-12 h-12 crest mb-2">

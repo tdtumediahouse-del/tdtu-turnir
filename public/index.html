@@ -67,10 +67,14 @@
                                 <div class="text-xs font-bold text-center leading-tight">{{ getTeamName(match.team1) }}</div>
                             </div>
                             <div class="px-4">
-                                <div v-if="match.status === 'finished'" class="score text-2xl px-4 py-2">
-                                    <span>{{ match.score1 }}</span>
-                                    <span class="dim mx-1">:</span>
-                                    <span>{{ match.score2 }}</span>
+                                <div v-if="match.status !== 'pending' || match.score1 != null || match.score2 != null" class="flex flex-col items-center gap-1">
+                                    <div class="score text-2xl px-4 py-2">
+                                        <span>{{ match.score1 ?? 0 }}</span>
+                                        <span class="dim mx-1">:</span>
+                                        <span>{{ match.score2 ?? 0 }}</span>
+                                    </div>
+                                    <div v-if="match.status === 'pending'" class="text-[10px] font-black text-red-400 tracking-wider">● JONLI</div>
+                                    <div v-else-if="match.status === 'technical'" class="text-[10px] font-black dim tracking-wider">TEXNIK</div>
                                 </div>
                                 <div v-else class="text-xl font-black dim italic tracking-wider">VS</div>
                             </div>

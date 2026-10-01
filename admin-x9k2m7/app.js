@@ -30,18 +30,18 @@ const DEFAULT_TEAMS = [
 
 const DEFAULT_MATCHES = [
     { id: 'gm1', team1: 't1', team2: 't2', score1: null, score2: null, status: 'pending' },
-    { id: 'gm2', team1: 't2', team2: 't3', score1: null, score2: null, status: 'pending' },
-    { id: 'gm3', team1: 't3', team2: 't4', score1: null, score2: null, status: 'pending' },
-    { id: 'gm4', team1: 't4', team2: 't5', score1: null, score2: null, status: 'pending' },
-    { id: 'gm5', team1: 't5', team2: 't6', score1: null, score2: null, status: 'pending' },
-    { id: 'gm6', team1: 't6', team2: 't7', score1: null, score2: null, status: 'pending' },
-    { id: 'gm7', team1: 't7', team2: 't8', score1: null, score2: null, status: 'pending' },
-    { id: 'gm8', team1: 't8', team2: 't9', score1: null, score2: null, status: 'pending' },
-    { id: 'gm9', team1: 't9', team2: 't10', score1: null, score2: null, status: 'pending' },
-    { id: 'gm10', team1: 't10', team2: 't11', score1: null, score2: null, status: 'pending' },
-    { id: 'gm11', team1: 't11', team2: 't12', score1: null, score2: null, status: 'pending' },
-    { id: 'gm12', team1: 't12', team2: 't13', score1: null, score2: null, status: 'pending' },
-    { id: 'gm13', team1: 't13', team2: 't1', score1: null, score2: null, status: 'pending' }
+    { id: 'gm2', team1: 't3', team2: 't4', score1: null, score2: null, status: 'pending' },
+    { id: 'gm3', team1: 't5', team2: 't6', score1: null, score2: null, status: 'pending' },
+    { id: 'gm4', team1: 't7', team2: 't8', score1: null, score2: null, status: 'pending' },
+    { id: 'gm5', team1: 't9', team2: 't10', score1: null, score2: null, status: 'pending' },
+    { id: 'gm6', team1: 't11', team2: 't12', score1: null, score2: null, status: 'pending' },
+    { id: 'gm7', team1: 't13', team2: 't1', score1: null, score2: null, status: 'pending' },
+    { id: 'gm8', team1: 't2', team2: 't3', score1: null, score2: null, status: 'pending' },
+    { id: 'gm9', team1: 't4', team2: 't5', score1: null, score2: null, status: 'pending' },
+    { id: 'gm10', team1: 't6', team2: 't7', score1: null, score2: null, status: 'pending' },
+    { id: 'gm11', team1: 't8', team2: 't9', score1: null, score2: null, status: 'pending' },
+    { id: 'gm12', team1: 't10', team2: 't11', score1: null, score2: null, status: 'pending' },
+    { id: 'gm13', team1: 't12', team2: 't13', score1: null, score2: null, status: 'pending' }
 ];
 
 const DEFAULT_PLAYOFF = {
@@ -125,11 +125,12 @@ const app = Vue.createApp({
             
             this.saveTimeout = setTimeout(() => {
                 this.isUpdatingRemote = true;
-                const data = {
+                // Firebase undefined qiymatni qabul qilmaydi; bo'sh katakni null qilib, undefined'larni olib tashlaymiz
+                const data = JSON.parse(JSON.stringify({
                     teams: this.teams.length ? this.teams : DEFAULT_TEAMS,
                     matches: this.matches,
                     playoff: this.playoff || DEFAULT_PLAYOFF
-                };
+                }, (k, v) => v === '' ? null : v));
                 
                 db.ref('turnir').set(data)
                     .then(() => { this.saveState = 'Saqlangan'; })
@@ -140,7 +141,7 @@ const app = Vue.createApp({
             }, 800);
         },
         finishMatch(match) {
-            if (match.score1 === null || match.score2 === null || match.score1 === '' || match.score2 === '') {
+            if (match.score1 == null || match.score2 == null || match.score1 === '' || match.score2 === '') {
                 alert("Iltimos, hisobni kiriting!");
                 return;
             }
@@ -188,7 +189,7 @@ const app = Vue.createApp({
         },
         finishPlayoff(key) {
             const m = this.playoff[key];
-            if (m.score1 === null || m.score2 === null) {
+            if (m.score1 == null || m.score2 == null || m.score1 === '' || m.score2 === '') {
                 alert("Hisobni kiriting!"); return;
             }
             if (m.score1 === m.score2) {
