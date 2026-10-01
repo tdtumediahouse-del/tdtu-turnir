@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#000503">
+    <meta name="robots" content="noindex, nofollow">
+    <title>ADMIN - TDTU TURNIR</title>
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-glow"><span></span><span></span><span></span></div>
+    <div class="bg-grid"></div>
+
+    <div id="app" v-cloak class="app-shell">
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="glass flex items-center justify-between p-3 mb-4">
+                <div class="flex items-center gap-3">
+                    <a href="../" class="logo" style="width:36px; height:36px;" title="Asosiy saytga qaytish"></a>
+                    <div>
+                        <div class="title text-sm shine">TDTU ADMIN</div>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                            <span class="dot-live" :class="{'bg-yellow-500 shadow-none animate-none': saveState === 'Saqlanmoqda...', 'bg-red-500 shadow-none animate-none': saveState === 'Xato'}"></span>
+                            <span class="label">{{ saveState }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <div class="pill" :style="{ width: '33.333%', transform: `translateX(${['guruh', 'playoff', 'sozlamalar'].indexOf(currentTab) * 100}%)` }"></div>
+                <button :class="{ on: currentTab === 'guruh' }" @click="currentTab = 'guruh'">Guruh</button>
+                <button :class="{ on: currentTab === 'playoff' }" @click="currentTab = 'playoff'">Play-off</button>
+                <button :class="{ on: currentTab === 'sozlamalar' }" @click="currentTab = 'sozlamalar'">Sozlamalar</button>
+            </div>
+        </div>
+
+        <div class="px-3 pb-8">
+            <Transition name="fade" mode="out-in">
+                <!-- Tab: Guruh O'yinlari -->
+                <div v-if="currentTab === 'guruh'" class="stagger">
+                    <div class="flex items-center justify-between mb-4 px-2">
+                        <div class="title text-sm">Barcha O'yinlar</div>
+                        <div class="chip chip-green">{{ finishedMatchesCount }}/13 yakunlangan</div>
+                    </div>
+
+                    <div class="flex flex-col gap-4">
+                        <div v-for="(match, i) in matches" :key="match.id" class="glass p-4" :style="{'--i': i}">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="label">O'yin {{ i + 1 }}</span>
+                                <span class="chip" 
+                                      :class="{'chip-green': match.status === 'finished', 'chip-red': match.status === 'technical', 'chip-gold': match.status === 'pending'}">
+                                    {{ match.status === 'finished' ? 'YAKUNLANGAN' : (match.status === 'technical' ? 'TEXNIK' : 'KUTILMOQDA') }}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-2 mb-4">
+                                <div class="flex flex-col items-center flex-1">
+                                    <img :src="getTeamLogo(match.team1)" class="w-12 h-12 crest mb-2">
+                                    <span class="text-xs font-bold text-center leading-tight">{{ getTeamName(match.team1) }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" class="input-3d score-input" v-model.number="match.score1" min="0" placeholder="-">
+                                    <span class="font-bold text-xl dim">:</span>
+                                    <input type="number" class="input-3d score-input" v-model.number="match.score2" min="0" placeholder="-">
+                                </div>
+                                <div class="flex flex-col items-center flex-1">
+                                    <img :src="getTeamLogo(match.team2)" class="w-12 h-12 crest mb-2">
+                                    <span class="text-xs font-bold text-center leading-tight">{{ getTeamName(match.team2) }}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">
+                                <button class="btn btn-green flex-1 py-2 text-[10px]" @click="finishMatch(match)">
+                                    <i class="fa-solid fa-check"></i> Yakunlash
+                                </button>
+                                <button class="btn btn-ghost py-2 px-3 text-[10px]" @click="resetMatch(match)">
+                                    <i class="fa-solid fa-rotate-left"></i> Bekor
+                                </button>
+                            </div>
+                            <div class="flex gap-2 mt-2">
+                                <button class="btn btn-red flex-1 py-1.5 text-[9px]" @click="setTechnical(match, 1)">T 3:0</button>
+                                <button class="btn btn-red flex-1 py-1.5 text-[9px]" @click="setTechnical(match, 2)">T 0:3</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Play-off -->
+                <div v-else-if="currentTab === 'playoff'" class="stagger">
+                    <div class="flex items-center justify-between mb-4 px-2">
+                        <div class="title text-sm">Play-off Bosqichi</div>
+                    </div>
+                    
+                    <button class="btn btn-blue w-full mb-6" @click="initPlayoff" :disabled="!groupFinished">
+                        <i class="fa-solid fa-sitemap"></i> Setkani yangilash (Guruh yakunlangach)
+                    </button>
+
+                    <div v-if="playoff" class="flex flex-col gap-6">
+                        <!-- QF -->
+                        <div>
+                            <div class="label mb-3 px-2">Chorak Final (QF)</div>
+                            <div class="flex flex-col gap-4">
+                                <div class="glass p-4">
+                                    <div class="bracket-label mb-2">QF1: 3-o'rin vs 6-o'rin</div>
+                                    <playoff-match :match="playoff.qf1" @save="finishPlayoff('qf1')" @reset="resetPlayoffMatch('qf1')" @tech="t => setPlayoffTech('qf1', t)"></playoff-match>
+                                </div>
+                                <div class="glass p-4">
+                                    <div class="bracket-label mb-2">QF2: 4-o'rin vs 5-o'rin</div>
+                                    <playoff-match :match="playoff.qf2" @save="finishPlayoff('qf2')" @reset="resetPlayoffMatch('qf2')" @tech="t => setPlayoffTech('qf2', t)"></playoff-match>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SF -->
+                        <div>
+                            <div class="label mb-3 px-2">Yarim Final (SF)</div>
+                            <div class="flex flex-col gap-4">
+                                <div class="glass p-4">
+                                    <div class="bracket-label mb-2">SF1: 1-o'rin vs QF2 g'olibi</div>
+                                    <playoff-match :match="playoff.sf1" @save="finishPlayoff('sf1')" @reset="resetPlayoffMatch('sf1')" @tech="t => setPlayoffTech('sf1', t)"></playoff-match>
+                                </div>
+                                <div class="glass p-4">
+                                    <div class="bracket-label mb-2">SF2: 2-o'rin vs QF1 g'olibi</div>
+                                    <playoff-match :match="playoff.sf2" @save="finishPlayoff('sf2')" @reset="resetPlayoffMatch('sf2')" @tech="t => setPlayoffTech('sf2', t)"></playoff-match>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final -->
+                        <div>
+                            <div class="label mb-3 px-2 shine text-center">FINAL</div>
+                            <div class="glass p-4 border-yellow-500/30">
+                                <div class="bracket-label mb-2 text-yellow-500">SF1 g'olibi vs SF2 g'olibi</div>
+                                <playoff-match :match="playoff.final" @save="finishPlayoff('final')" @reset="resetPlayoffMatch('final')" @tech="t => setPlayoffTech('final', t)"></playoff-match>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Sozlamalar -->
+                <div v-else-if="currentTab === 'sozlamalar'" class="stagger">
+                    <div class="glass p-5 mb-4">
+                        <div class="title text-sm mb-4">Turnir Holati</div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm dim">Guruh o'yinlari:</span>
+                            <span class="font-bold">{{ finishedMatchesCount }} / 13</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm dim">Turnir Holati:</span>
+                            <span class="chip" :class="groupFinished ? 'chip-green' : 'chip-gold'">
+                                {{ groupFinished ? "Guruh yakunlangan" : "Davom etmoqda" }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="glass p-5 flex flex-col gap-4">
+                        <div class="title text-sm mb-2">Boshqaruv</div>
+                        
+                        <button class="btn btn-blue w-full" @click="initTournament">
+                            <i class="fa-solid fa-play"></i> Turnirni boshlash (Ma'lumotlarni yaratish)
+                        </button>
+                        
+                        <button class="btn btn-ghost w-full border-red-500/30 text-red-400" @click="resetScores">
+                            <i class="fa-solid fa-eraser"></i> Barcha natijalarni tozalash (Jamoalar qoladi)
+                        </button>
+                        
+                        <button class="btn btn-red w-full mt-4" @click="resetAll">
+                            <i class="fa-solid fa-trash"></i> Ma'lumotlarni butunlay o'chirish
+                        </button>
+                    </div>
+                </div>
+            </Transition>
+        </div>
+    </div>
+
+    <!-- Playoff Match Component Template -->
+    <template id="playoff-match-template">
+        <div>
+            <div class="flex justify-center mb-3">
+                <span class="chip" 
+                      :class="{'chip-green': match.status === 'finished', 'chip-red': match.status === 'technical', 'chip-gold': match.status === 'pending'}">
+                    {{ match.status === 'finished' ? 'YAKUNLANGAN' : (match.status === 'technical' ? 'TEXNIK' : 'KUTILMOQDA') }}
+                </span>
+            </div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+                <div class="flex flex-col items-center flex-1">
+                    <img v-if="match.team1" :src="$root.getTeamLogo(match.team1)" class="w-10 h-10 crest mb-1">
+                    <div v-else class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 mb-1 flex items-center justify-center text-xs text-slate-500">?</div>
+                    <span class="text-[10px] font-bold text-center leading-tight">{{ match.team1 ? $root.getTeamName(match.team1) : 'Kutilmoqda' }}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <input type="number" class="input-3d score-input !w-12 !h-12 !text-xl" v-model.number="match.score1" :disabled="!match.team1 || !match.team2" placeholder="-">
+                    <span class="font-bold text-lg dim">:</span>
+                    <input type="number" class="input-3d score-input !w-12 !h-12 !text-xl" v-model.number="match.score2" :disabled="!match.team1 || !match.team2" placeholder="-">
+                </div>
+                <div class="flex flex-col items-center flex-1">
+                    <img v-if="match.team2" :src="$root.getTeamLogo(match.team2)" class="w-10 h-10 crest mb-1">
+                    <div v-else class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 mb-1 flex items-center justify-center text-xs text-slate-500">?</div>
+                    <span class="text-[10px] font-bold text-center leading-tight">{{ match.team2 ? $root.getTeamName(match.team2) : 'Kutilmoqda' }}</span>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-1">
+                <button class="btn btn-green flex-1 py-1.5 px-2 text-[9px]" @click="$emit('save')" :disabled="!match.team1 || !match.team2">Yakunlash</button>
+                <button class="btn btn-ghost py-1.5 px-2 text-[9px]" @click="$emit('reset')" :disabled="!match.team1 && !match.team2">Bekor</button>
+            </div>
+            <div class="flex gap-1 mt-1">
+                <button class="btn btn-red flex-1 py-1 text-[8px]" @click="$emit('tech', 1)" :disabled="!match.team1 || !match.team2">T 3:0</button>
+                <button class="btn btn-red flex-1 py-1 text-[8px]" @click="$emit('tech', 2)" :disabled="!match.team1 || !match.team2">T 0:3</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="app.js"></script>
+</body>
+</html>

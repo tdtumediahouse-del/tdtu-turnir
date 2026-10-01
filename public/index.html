@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#000503">
+    <meta name="description" content="TDTU Mini Turnir — o'yinlar, natijalar, turnir jadvali va play-off">
+    <title>TDTU MINI TURNIR</title>
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-glow"><span></span><span></span><span></span></div>
+    <div class="bg-grid"></div>
+    <div id="app" v-cloak>
+        <!-- SPLASH SCREEN -->
+        <transition name="splash">
+            <div v-if="showSplash" class="splash">
+                <div class="logo-lg ring"></div>
+                <div class="name title shine">TDTU MINI TURNIR</div>
+                <div class="line"></div>
+            </div>
+        </transition>
+
+        <div class="app-shell" v-show="!showSplash">
+            <!-- TOPBAR -->
+            <header class="topbar">
+                <div class="glass flex items-center justify-between p-3 mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="logo"></div>
+                        <div>
+                            <div class="title text-sm shine leading-tight">TDTU MINI TURNIR</div>
+                            <div class="text-[10px] text-gray-400 font-medium">Toshkent davlat texnika universiteti</div>
+                        </div>
+                    </div>
+                    <div class="chip" :class="isPlayoffStage ? 'chip-gold' : 'chip-green'">
+                        {{ isPlayoffStage ? (isFinalsStage ? 'FINAL' : 'PLAY-OFF') : 'GURUH' }}
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <div class="pill" :style="{ width: '25%', transform: `translateX(${tabIndex * 100}%)` }"></div>
+                    <button :class="{ on: currentTab === 'O\'yinlar' }" @click="setTab('O\'yinlar')">O'yinlar</button>
+                    <button :class="{ on: currentTab === 'Jadval' }" @click="setTab('Jadval')">Jadval</button>
+                    <button :class="{ on: currentTab === 'Play-off' }" @click="setTab('Play-off')">Play-off</button>
+                    <button :class="{ on: currentTab === 'Haqida' }" @click="setTab('Haqida')">Haqida</button>
+                </div>
+            </header>
+
+            <main class="px-3 pb-8">
+                <!-- O'YINLAR TAB -->
+                <transition name="fade" mode="out-in">
+                    <div v-if="currentTab === 'O\'yinlar'" class="stagger">
+                        <div v-if="matches.length === 0" class="text-center p-8 dim">
+                            O'yinlar hali qo'shilmagan
+                        </div>
+                        <div v-for="(match, idx) in matches" :key="match.id" :style="{'--i': idx}" class="glass tap mb-3 p-4 flex items-center justify-between">
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div v-html="teamLogo(match.team1)" class="crest w-12 h-12"></div>
+                                <div class="text-xs font-bold text-center leading-tight">{{ getTeamName(match.team1) }}</div>
+                            </div>
+                            <div class="px-4">
+                                <div v-if="match.status === 'finished'" class="score text-2xl px-4 py-2">
+                                    <span>{{ match.score1 }}</span>
+                                    <span class="dim mx-1">:</span>
+                                    <span>{{ match.score2 }}</span>
+                                </div>
+                                <div v-else class="text-xl font-black dim italic tracking-wider">VS</div>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center gap-2">
+                                <div v-html="teamLogo(match.team2)" class="crest w-12 h-12"></div>
+                                <div class="text-xs font-bold text-center leading-tight">{{ getTeamName(match.team2) }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JADVAL TAB -->
+                    <div v-else-if="currentTab === 'Jadval'" class="stagger">
+                        <div class="glass p-1 overflow-hidden">
+                            <table class="ltable">
+                                <thead>
+                                    <tr>
+                                        <th class="w-8">#</th>
+                                        <th class="text-left pl-2">JAMOA</th>
+                                        <th title="O'yinlar">O'</th>
+                                        <th title="G'alaba">G</th>
+                                        <th title="Durang">D</th>
+                                        <th title="Mag'lubiyat">M</th>
+                                        <th title="To'plar farqi">±</th>
+                                        <th class="text-white" title="Ochko">O</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="standings.length === 0">
+                                        <td colspan="8" class="py-6 dim">Jadval bo'sh</td>
+                                    </tr>
+                                    <tr v-for="(row, i) in standings" :key="row.team.id" :style="{'--i': i}">
+                                        <td>
+                                            <span v-if="i < 3" class="pos" :class="`pos-${i+1}`">{{ i + 1 }}</span>
+                                            <span v-else class="font-bold text-slate-400">{{ i + 1 }}</span>
+                                        </td>
+                                        <td class="text-left pl-2">
+                                            <div class="flex items-center gap-2 relative">
+                                                <div v-if="i < 6" class="absolute -left-3 top-0 bottom-0 w-1 bg-green-500 rounded-r opacity-50"></div>
+                                                <div v-html="teamLogo(row.team.id)" class="w-6 h-6 crest"></div>
+                                                <span class="font-bold text-sm text-white truncate" style="max-width:120px">{{ row.team.name }}</span>
+                                            </div>
+                                        </td>
+                                        <td>{{ row.played }}</td>
+                                        <td>{{ row.won }}</td>
+                                        <td>{{ row.drawn }}</td>
+                                        <td>{{ row.lost }}</td>
+                                        <td :class="row.gd > 0 ? 'text-emerald-400' : (row.gd < 0 ? 'text-rose-400' : '')">{{ row.gd > 0 ? '+' : '' }}{{ row.gd }}</td>
+                                        <td class="pts">{{ row.points }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 flex gap-4 text-xs font-medium text-gray-500 justify-center">
+                            <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-500 rounded-sm opacity-50"></div> Play-off (Top 6)</div>
+                        </div>
+                    </div>
+
+                    <!-- PLAY-OFF TAB -->
+                    <div v-else-if="currentTab === 'Play-off'" class="stagger">
+                        <div v-if="!isGroupStageComplete" class="glass p-8 text-center">
+                            <i class="fas fa-lock text-3xl dim mb-4"></i>
+                            <div class="font-bold text-lg mb-2">Guruh bosqichi tugamagan</div>
+                            <div class="dim text-sm">Play-off bosqichi guruh o'yinlari to'liq yakunlangandan so'ng ochiladi.</div>
+                        </div>
+                        <div v-else class="flex flex-col gap-6">
+                            
+                            <div v-if="champion" class="champion-card">
+                                <div class="text-4xl mb-4">🏆</div>
+                                <div class="label mb-2 text-yellow-500">CHAMPION</div>
+                                <div class="flex justify-center mb-4">
+                                    <div v-html="teamLogo(champion.id)" class="crest w-24 h-24"></div>
+                                </div>
+                                <div class="title text-2xl text-white">{{ champion.name }}</div>
+                            </div>
+
+                            <div class="flex flex-col gap-6">
+                                <!-- Quarter Finals -->
+                                <div class="glass p-4">
+                                    <div class="bracket-label">¼ FINAL</div>
+                                    <div class="flex flex-col gap-4">
+                                        <div class="bracket-match" :class="{ 'winner': isWinner(playoff.qf1, playoff.qf1.team1) }">
+                                            <div class="bracket-team" :class="getTeamClass(playoff.qf1, 1)">
+                                                <div v-html="teamLogo(playoff.qf1.team1)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.qf1.team1) }}
+                                                <span class="bt-score">{{ playoff.qf1.score1 !== null ? playoff.qf1.score1 : '-' }}</span>
+                                            </div>
+                                            <div class="bracket-divider"></div>
+                                            <div class="bracket-team" :class="getTeamClass(playoff.qf1, 2)">
+                                                <div v-html="teamLogo(playoff.qf1.team2)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.qf1.team2) }}
+                                                <span class="bt-score">{{ playoff.qf1.score2 !== null ? playoff.qf1.score2 : '-' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="bracket-match" :class="{ 'winner': isWinner(playoff.qf2, playoff.qf2.team1) }">
+                                            <div class="bracket-team" :class="getTeamClass(playoff.qf2, 1)">
+                                                <div v-html="teamLogo(playoff.qf2.team1)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.qf2.team1) }}
+                                                <span class="bt-score">{{ playoff.qf2.score1 !== null ? playoff.qf2.score1 : '-' }}</span>
+                                            </div>
+                                            <div class="bracket-divider"></div>
+                                            <div class="bracket-team" :class="getTeamClass(playoff.qf2, 2)">
+                                                <div v-html="teamLogo(playoff.qf2.team2)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.qf2.team2) }}
+                                                <span class="bt-score">{{ playoff.qf2.score2 !== null ? playoff.qf2.score2 : '-' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Semi Finals -->
+                                <div class="glass p-4 border-emerald-900/50">
+                                    <div class="bracket-label text-emerald-500">½ FINAL</div>
+                                    <div class="flex flex-col gap-4">
+                                        <div class="bracket-match" :class="{ 'winner': isWinner(playoff.sf1, playoff.sf1.team1) }">
+                                            <div class="bracket-team" :class="getTeamClass(playoff.sf1, 1)">
+                                                <div v-html="teamLogo(playoff.sf1.team1)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.sf1.team1) || 'Kutilyapti...' }}
+                                                <span class="bt-score">{{ playoff.sf1.score1 !== null ? playoff.sf1.score1 : '-' }}</span>
+                                            </div>
+                                            <div class="bracket-divider"></div>
+                                            <div class="bracket-team" :class="getTeamClass(playoff.sf1, 2)">
+                                                <div v-html="teamLogo(playoff.sf1.team2)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.sf1.team2) || 'Kutilyapti...' }}
+                                                <span class="bt-score">{{ playoff.sf1.score2 !== null ? playoff.sf1.score2 : '-' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="bracket-match" :class="{ 'winner': isWinner(playoff.sf2, playoff.sf2.team1) }">
+                                            <div class="bracket-team" :class="getTeamClass(playoff.sf2, 1)">
+                                                <div v-html="teamLogo(playoff.sf2.team1)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.sf2.team1) || 'Kutilyapti...' }}
+                                                <span class="bt-score">{{ playoff.sf2.score1 !== null ? playoff.sf2.score1 : '-' }}</span>
+                                            </div>
+                                            <div class="bracket-divider"></div>
+                                            <div class="bracket-team" :class="getTeamClass(playoff.sf2, 2)">
+                                                <div v-html="teamLogo(playoff.sf2.team2)" class="w-5 h-5"></div>
+                                                {{ getTeamName(playoff.sf2.team2) || 'Kutilyapti...' }}
+                                                <span class="bt-score">{{ playoff.sf2.score2 !== null ? playoff.sf2.score2 : '-' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Final -->
+                                <div class="glass p-4 border-yellow-900/50">
+                                    <div class="bracket-label text-yellow-500">FINAL</div>
+                                    <div class="bracket-match" :class="{ 'winner': isWinner(playoff.final, playoff.final.team1) }">
+                                        <div class="bracket-team" :class="getTeamClass(playoff.final, 1)">
+                                            <div v-html="teamLogo(playoff.final.team1)" class="w-5 h-5"></div>
+                                            {{ getTeamName(playoff.final.team1) || 'Kutilyapti...' }}
+                                            <span class="bt-score">{{ playoff.final.score1 !== null ? playoff.final.score1 : '-' }}</span>
+                                        </div>
+                                        <div class="bracket-divider"></div>
+                                        <div class="bracket-team" :class="getTeamClass(playoff.final, 2)">
+                                            <div v-html="teamLogo(playoff.final.team2)" class="w-5 h-5"></div>
+                                            {{ getTeamName(playoff.final.team2) || 'Kutilyapti...' }}
+                                            <span class="bt-score">{{ playoff.final.score2 !== null ? playoff.final.score2 : '-' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HAQIDA TAB -->
+                    <div v-else-if="currentTab === 'Haqida'" class="stagger">
+                        <div class="glass p-6 text-center mb-4">
+                            <div class="logo-lg mx-auto mb-4"></div>
+                            <h2 class="title text-xl mb-1">TDTU MINI TURNIR</h2>
+                            <p class="dim text-sm">Toshkent davlat texnika universiteti</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="glass p-4 text-center">
+                                <div class="text-2xl font-black text-white mb-1">13</div>
+                                <div class="label">Jamoa</div>
+                            </div>
+                            <div class="glass p-4 text-center">
+                                <div class="text-2xl font-black text-white mb-1">13</div>
+                                <div class="label">Jami o'yinlar</div>
+                            </div>
+                            <div class="glass p-4 text-center">
+                                <div class="text-2xl font-black text-white mb-1">2</div>
+                                <div class="label">Har jamoa o'yini</div>
+                            </div>
+                            <div class="glass p-4 text-center">
+                                <div class="text-2xl font-black text-green-400 mb-1">Top 6</div>
+                                <div class="label">Play-off ga</div>
+                            </div>
+                        </div>
+
+                        <div class="glass p-5">
+                            <h3 class="font-bold text-white mb-4 flex items-center gap-2">
+                                <i class="fas fa-book text-green-500"></i> Qoidalar
+                            </h3>
+                            <ul class="text-sm text-slate-300 space-y-3">
+                                <li class="flex gap-3"><i class="fas fa-check-circle text-green-500 mt-1"></i> <div><b>Turnir tizimi:</b> Har bir jamoa 2 ta o'yin o'tkazadi. Eng yaxshi natija ko'rsatgan 6 ta jamoa play-off bosqichiga yo'l oladi.</div></li>
+                                <li class="flex gap-3"><i class="fas fa-check-circle text-green-500 mt-1"></i> <div><b>Ochko tizimi:</b> G'alaba - 3 ochko, Durang - 1 ochko, Mag'lubiyat - 0 ochko.</div></li>
+                                <li class="flex gap-3"><i class="fas fa-check-circle text-green-500 mt-1"></i> <div><b>Teng ochkolar:</b> Ochkolar teng kelib qolsa: 1) to'plar farqi, 2) urilgan to'plar soniga qaraladi.</div></li>
+                                <li class="flex gap-3"><i class="fas fa-check-circle text-green-500 mt-1"></i> <div><b>Play-off:</b> ¼ final (3-o'rin 6-o'rin bilan, 4-o'rin 5-o'rin bilan), ½ final (1-o'rin va 2-o'rin egalari g'oliblar bilan), Final.</div></li>
+                            </ul>
+                        </div>
+                    </div>
+                </transition>
+            </main>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

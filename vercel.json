@@ -1,0 +1,35 @@
+{
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "trailingSlash": true,
+  "rewrites": [
+    {
+      "source": "/admin-x9k2m7/",
+      "destination": "/admin-x9k2m7/index.html"
+    },
+    {
+      "source": "/admin-x9k2m7/:path*",
+      "destination": "/admin-x9k2m7/:path*"
+    },
+    {
+      "source": "/",
+      "destination": "/public/index.html"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/public/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/admin-x9k2m7/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    }
+  ]
+}
